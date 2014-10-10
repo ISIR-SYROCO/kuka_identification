@@ -1,0 +1,28 @@
+import("lwr_fri")
+import("kuka_identification")
+
+loadComponent("lwr", "lwr_fri::FRIRTNetComponent")
+loadComponent("KukaId", "KukaIdentificationRTNET")
+
+setActivity("lwr", 0, 99, ORO_SCHED_RT)
+setActivity("KukaId", 0.001, 90, ORO_SCHED_RT)
+
+lwr.local_port = 49938
+lwr.configure
+
+connectPeers("lwr","KukaId")
+KukaId.setPeer("lwr")
+
+//Port connection
+KukaId.connectOJointPosition()
+KukaId.connectIEvents()
+KukaId.connectIMsrJntPos()
+KukaId.connectIMassMatrix()
+KukaId.connectIGravity()
+
+KukaId.configure
+KukaId.friReset
+
+//lwr.control_mode=2
+//lwr.start
+
