@@ -15,7 +15,6 @@ KukaId.setPeer("lwr")
 
 //Port connection
 KukaId.connectOJointPosition()
-KukaId.connectOJointVelocities()
 KukaId.connectIEvents()
 KukaId.connectIMsrJntPos()
 KukaId.connectIMassMatrix()
@@ -24,6 +23,7 @@ KukaId.connectIGravity()
 KukaId.configure
 KukaId.friReset
 
-lwr.control_mode=2
+lwr.control_mode=1
 lwr.start
+
 
