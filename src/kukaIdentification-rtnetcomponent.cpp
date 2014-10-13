@@ -9,7 +9,9 @@
 #include <rtt/Component.hpp>
 
 KukaIdentificationRTNET::KukaIdentificationRTNET(std::string const& name) : FriRTNetExampleAbstract(name){
-    t = 0;
+    t.assign(LWRDOF, 0);
+
+    goToZero = true;
 
     qlimit.reserve(LWRDOF);
     qlimit[0] = 2.97;
@@ -38,13 +40,29 @@ KukaIdentificationRTNET::KukaIdentificationRTNET(std::string const& name) : FriR
     phi[5] = 1.3;
     phi[6] = 1.7;
 
-	joint_vel_command.assign(LWRDOF, 0.0);
+	joint_pos_command.assign(LWRDOF, 0.0);
 	gravity.assign(LWRDOF, 0.0);
 }
 
-void KukaIdentificationRTNET::computeJointVelocity(unsigned int t){
-    for(unsigned int i = 0; i<LWRDOF; ++i){
-        joint_vel_command[i] = qlimit[i] * cos(omega[i]*t + phi[i]);
+void KukaIdentificationRTNET::computeJointPosition(){
+    if(goToZero == true){
+        if(current_pos.norm() < 0.001){
+            goToZero = false;
+        }
+        for(unsigned int i=0; i<LWRDOF; ++i){
+            if(current_pos[i] < -0.1)
+                joint_pos_command[i] += 0.1*getPeriod();
+            else if(current_pos[i] > 0.1)
+                joint_pos_command[i] -= 0.1*getPeriod();
+            else
+                joint_pos_command[i] -= current_pos[i]*getPeriod();
+        }
+    }
+    else{
+        for(unsigned int i=0; i<LWRDOF; ++i){
+            joint_pos_command[i] = qlimit[i] * sin(omega[i]*0.00001*t[i]);
+            t[i]++;
+        }
     }
 }
 
@@ -61,9 +79,8 @@ void KukaIdentificationRTNET::updateHook(){
     RTT::FlowStatus joint_state_fs = iport_msr_joint_pos.read(JState);
 
     if(joint_state_fs == RTT::NewData){        
-        Eigen::VectorXd joint_pos(LWRDOF);
         for(unsigned int i = 0; i < LWRDOF; i++){
-            joint_pos[i] = JState[i];
+            current_pos[i] = JState[i];
         }
     }
 
@@ -78,15 +95,13 @@ void KukaIdentificationRTNET::updateHook(){
 
     }
 
-    computeJointVelocity(t);
 
     if (fri_cmd_mode){
+        computeJointPosition();
         if(requiresControlMode(10)){
-            oport_joint_velocities.write(joint_vel_command);
+            oport_joint_position.write(joint_pos_command);
         }
     }
-
-    t++;
 }
 
 ORO_CREATE_COMPONENT(KukaIdentificationRTNET)
