@@ -28,6 +28,7 @@ class KukaIdentificationRTNET : public FriRTNetExampleAbstract{
         std::vector<unsigned int> t;
 
         bool goToZero;
+	double v;
 };
 
 #endif /* KUKAIDENTIFICATION-RTNETCOMPONENT_HPP */

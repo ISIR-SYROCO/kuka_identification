@@ -12,15 +12,16 @@ KukaIdentificationRTNET::KukaIdentificationRTNET(std::string const& name) : FriR
     t.assign(LWRDOF, 0);
 
     goToZero = true;
+    v = 0.0;
 
     qlimit.reserve(LWRDOF);
-    qlimit[0] = 2.97;
-    qlimit[1] = 2.10;
-    qlimit[2] = 2.97;
-    qlimit[3] = 2.10;
-    qlimit[4] = 2.97;
-    qlimit[5] = 2.10;
-    qlimit[6] = 2.97;
+    qlimit[0] = 2.87;
+    qlimit[1] = 2.00;
+    qlimit[2] = 2.87;
+    qlimit[3] = 2.00;
+    qlimit[4] = 2.87;
+    qlimit[5] = 2.00;
+    qlimit[6] = 2.87;
 
     omega.reserve(LWRDOF);
     omega[0] = 0.7;
@@ -50,17 +51,19 @@ void KukaIdentificationRTNET::computeJointPosition(){
             goToZero = false;
         }
         for(unsigned int i=0; i<LWRDOF; ++i){
-            if(current_pos[i] < -0.1)
-                joint_pos_command[i] += 0.1*getPeriod();
-            else if(current_pos[i] > 0.1)
-                joint_pos_command[i] -= 0.1*getPeriod();
+            if(current_pos[i] < -0.2)
+                joint_pos_command[i] += v*getPeriod();
+            else if(current_pos[i] > 0.2)
+                joint_pos_command[i] -= v*getPeriod();
             else
                 joint_pos_command[i] -= current_pos[i]*getPeriod();
+	    if(v<0.2)
+	        v+=0.00001;
         }
     }
     else{
-        for(unsigned int i=0; i<LWRDOF; ++i){
-            joint_pos_command[i] = qlimit[i] * sin(omega[i]*0.00001*t[i]);
+        for(unsigned int i=0; i<2; ++i){
+            joint_pos_command[i] = qlimit[i] * sin(omega[i]*0.0001*t[i]);
             t[i]++;
         }
     }
@@ -100,6 +103,11 @@ void KukaIdentificationRTNET::updateHook(){
         computeJointPosition();
         if(requiresControlMode(10)){
             oport_joint_position.write(joint_pos_command);
+        }
+    }
+    else{
+        for(unsigned int i = 0; i < LWRDOF; i++){
+            joint_pos_command[i] = JState[i];
         }
     }
 }
