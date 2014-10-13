@@ -19,7 +19,7 @@ KukaIdentificationRTNET::KukaIdentificationRTNET(std::string const& name) : FriR
 
     qlimit.reserve(LWRDOF);
     qlimit[0] = 2.87;
-    qlimit[1] = 2.00;
+    qlimit[1] = 1.90;
     qlimit[2] = 2.87;
     qlimit[3] = 2.00;
     qlimit[4] = 2.87;
@@ -27,22 +27,22 @@ KukaIdentificationRTNET::KukaIdentificationRTNET(std::string const& name) : FriR
     qlimit[6] = 2.87;
 
     omega.reserve(LWRDOF);
-    omega[0] = 0.7;
-    omega[1] = 0.4;
-    omega[2] = 0.3;
-    omega[3] = 0.2;
+    omega[0] = 0.9;
+    omega[1] = -0.239;
+    omega[2] = 0.427;
+    omega[3] = 0.441;
     omega[4] = 0.3;
     omega[5] = 0.4;
     omega[6] = 0.5;
 
     phi.reserve(LWRDOF);
     phi[0] = 0.0;
-    phi[1] = 0.1;
-    phi[2] = 0.3;
-    phi[3] = 0.5;
-    phi[4] = 0.7;
-    phi[5] = 1.1;
-    phi[6] = 1.3;
+    phi[1] = 0.12;
+    phi[2] = 0.14;
+    phi[3] = 0.311;
+    phi[4] = 0.12;
+    phi[5] = 0.137;
+    phi[6] = 0.71;
 
 	joint_pos_command.assign(LWRDOF, 0.0);
 
@@ -70,7 +70,7 @@ void KukaIdentificationRTNET::computeJointPosition(){
     }
     else{
         for(unsigned int i=0; i<LWRDOF; ++i){
-            if(phi[i] <= omega[i]*0.0001*t[0]){
+            if(phi[i] <= sqrt(omega[i]*omega[i])*0.0001*t[0]){
                 joint_pos_command[i] = qlimit[i] * sin(omega[i]*0.0001*t[i]);
                 t[i]++;
             }
@@ -79,16 +79,25 @@ void KukaIdentificationRTNET::computeJointPosition(){
 }
 
 void KukaIdentificationRTNET::dumpLog(){
-    std::ofstream file;
-    file.open("log.txt");
+    std::ofstream pos_file;
+    std::ofstream mass_file;
+    std::ofstream g_file;
+    pos_file.open("log_pos.txt");
+    mass_file.open("log_mass.txt");
+    g_file.open("log_g.txt");
     for(unsigned int i=0; i<position_log.size(); ++i){
-        file << position_log[i].transpose() << std::endl << std::endl;
+        pos_file << position_log[i].transpose() << std::endl;
 
-        file << mass_matrix_log[i] << std::endl << std::endl;
+	for(unsigned int j=0; j<49; ++j){
+	        mass_file << mass_matrix_log[i](j) << " ";
+	}
+	mass_file << std::endl;
 
-        file << gravity_log[i].transpose() << std::endl << std::endl;
+        g_file << gravity_log[i].transpose() << std::endl;
     }
-    file.close();
+    pos_file.close();
+    mass_file.close();
+    g_file.close();
 }
 
 void KukaIdentificationRTNET::updateHook(){
@@ -107,20 +116,20 @@ void KukaIdentificationRTNET::updateHook(){
         for(unsigned int i = 0; i < LWRDOF; i++){
             current_pos[i] = JState[i];
         }
-        if(loging){
+        if(loging && t[0]%10 == 0){
             position_log.push_back(current_pos);
         }
     }
 
 
     RTT::FlowStatus mass_matrix_fs = iport_mass_matrix.read(mass_matrix);
-    if(mass_matrix_fs == RTT::NewData && loging){
+    if(mass_matrix_fs == RTT::NewData && loging && t[0]%10 == 0){
         mass_matrix_log.push_back(mass_matrix);
     }
 
     std::vector<double> gravity_(LWRDOF);
     RTT::FlowStatus gravity_fs = gravityPort.read(gravity_);
-    if(gravity_fs == RTT::NewData && loging){
+    if(gravity_fs == RTT::NewData && loging && t[0]%10 == 0){
         for(unsigned int i = 0; i < LWRDOF; i++){
             gravity[i] = gravity_[i];
         }
@@ -143,6 +152,7 @@ void KukaIdentificationRTNET::updateHook(){
 
 void KukaIdentificationRTNET::stopHook(){
     dumpLog();
+    std::cout << t[0] << std::endl;
 }
 
 ORO_CREATE_COMPONENT(KukaIdentificationRTNET)
