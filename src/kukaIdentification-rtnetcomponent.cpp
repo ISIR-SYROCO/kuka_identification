@@ -5,6 +5,8 @@
 
 #include "kukaIdentification-rtnetcomponent.hpp"
 #include <cmath>
+#include <fstream>
+#include <iostream>
 
 #include <rtt/Component.hpp>
 
@@ -12,6 +14,7 @@ KukaIdentificationRTNET::KukaIdentificationRTNET(std::string const& name) : FriR
     t.assign(LWRDOF, 0);
 
     goToZero = true;
+    loging = false;
     v = 0.0;
 
     qlimit.reserve(LWRDOF);
@@ -42,13 +45,17 @@ KukaIdentificationRTNET::KukaIdentificationRTNET(std::string const& name) : FriR
     phi[6] = 1.3;
 
 	joint_pos_command.assign(LWRDOF, 0.0);
-	gravity.assign(LWRDOF, 0.0);
+
+    position_log.reserve(20000);
+    gravity_log.reserve(20000);
+    mass_matrix_log.reserve(20000);
 }
 
 void KukaIdentificationRTNET::computeJointPosition(){
     if(goToZero == true){
         if(current_pos.norm() < 0.001){
             goToZero = false;
+            loging = true;
         }
         for(unsigned int i=0; i<LWRDOF; ++i){
             if(current_pos[i] < -0.2)
@@ -71,6 +78,19 @@ void KukaIdentificationRTNET::computeJointPosition(){
     }
 }
 
+void KukaIdentificationRTNET::dumpLog(){
+    std::ofstream file;
+    file.open("log.txt");
+    for(unsigned int i=0; i<position_log.size(); ++i){
+        file << position_log[i].transpose() << std::endl;
+
+        file << mass_matrix_log[i] << std::endl;
+
+        file << gravity_log[i] << std::endl;
+    }
+    file.close();
+}
+
 void KukaIdentificationRTNET::updateHook(){
     std::string fri_mode("e_fri_unkown_mode");
     bool fri_cmd_mode = false;
@@ -87,17 +107,24 @@ void KukaIdentificationRTNET::updateHook(){
         for(unsigned int i = 0; i < LWRDOF; i++){
             current_pos[i] = JState[i];
         }
+        if(loging){
+            position_log.push_back(current_pos);
+        }
     }
 
 
     RTT::FlowStatus mass_matrix_fs = iport_mass_matrix.read(mass_matrix);
-    if(mass_matrix_fs == RTT::NewData){
-
+    if(mass_matrix_fs == RTT::NewData && loging){
+        mass_matrix_log.push_back(mass_matrix);
     }
 
-    RTT::FlowStatus gravity_fs = gravityPort.read(gravity);
-    if(gravity_fs == RTT::NewData){
-
+    std::vector<double> gravity_(LWRDOF);
+    RTT::FlowStatus gravity_fs = gravityPort.read(gravity_);
+    if(gravity_fs == RTT::NewData && loging){
+        for(unsigned int i = 0; i < LWRDOF; i++){
+            gravity[i] = gravity_[i];
+        }
+        gravity_log.push_back(gravity);
     }
 
 
@@ -112,6 +139,10 @@ void KukaIdentificationRTNET::updateHook(){
             joint_pos_command[i] = JState[i];
         }
     }
+}
+
+void KukaIdentificationRTNET::stopHook(){
+    dumpLog();
 }
 
 ORO_CREATE_COMPONENT(KukaIdentificationRTNET)
