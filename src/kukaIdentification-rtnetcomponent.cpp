@@ -69,8 +69,8 @@ void KukaIdentificationRTNET::computeJointPosition(){
         }
     }
     else{
-        for(unsigned int i=0; i<2; ++i){
-            if(phi[i] <= omega[i]*0.0001*t[i]){
+        for(unsigned int i=0; i<LWRDOF; ++i){
+            if(phi[i] <= omega[i]*0.0001*t[0]){
                 joint_pos_command[i] = qlimit[i] * sin(omega[i]*0.0001*t[i]);
                 t[i]++;
             }
@@ -82,11 +82,11 @@ void KukaIdentificationRTNET::dumpLog(){
     std::ofstream file;
     file.open("log.txt");
     for(unsigned int i=0; i<position_log.size(); ++i){
-        file << position_log[i].transpose() << std::endl;
+        file << position_log[i].transpose() << std::endl << std::endl;
 
-        file << mass_matrix_log[i] << std::endl;
+        file << mass_matrix_log[i] << std::endl << std::endl;
 
-        file << gravity_log[i] << std::endl;
+        file << gravity_log[i].transpose() << std::endl << std::endl;
     }
     file.close();
 }
