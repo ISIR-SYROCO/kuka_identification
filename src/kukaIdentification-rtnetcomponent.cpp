@@ -33,13 +33,13 @@ KukaIdentificationRTNET::KukaIdentificationRTNET(std::string const& name) : FriR
     omega[6] = 0.5;
 
     phi.reserve(LWRDOF);
-    phi[0] = 0.1;
-    phi[1] = 0.3;
-    phi[2] = 0.5;
-    phi[3] = 0.7;
-    phi[4] = 1.1;
-    phi[5] = 1.3;
-    phi[6] = 1.7;
+    phi[0] = 0.0;
+    phi[1] = 0.1;
+    phi[2] = 0.3;
+    phi[3] = 0.5;
+    phi[4] = 0.7;
+    phi[5] = 1.1;
+    phi[6] = 1.3;
 
 	joint_pos_command.assign(LWRDOF, 0.0);
 	gravity.assign(LWRDOF, 0.0);
@@ -63,8 +63,10 @@ void KukaIdentificationRTNET::computeJointPosition(){
     }
     else{
         for(unsigned int i=0; i<2; ++i){
-            joint_pos_command[i] = qlimit[i] * sin(omega[i]*0.0001*t[i]);
-            t[i]++;
+            if(phi[i] <= omega[i]*0.0001*t[i]){
+                joint_pos_command[i] = qlimit[i] * sin(omega[i]*0.0001*t[i]);
+                t[i]++;
+            }
         }
     }
 }
